@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  auth_service:
+    build: ./auth_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./auth_service:/app
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  core_service:
+    build: ./core_service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./core_service:/app
+    depends_on:
+      - redis
+      - db
+
+  core_worker:
+    build: ./core_service
+    command: celery -A core_project worker --loglevel=info
+    volumes:
+      - ./core_service:/app
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./frontend:/app
+
+  db:
+    image: postgres:15
+    container_name: ads_project-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pg_data:

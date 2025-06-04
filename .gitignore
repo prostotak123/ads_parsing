@@ -1,0 +1,80 @@
+# ─────────────────────────────
+# 🌐 Глобальне (усе в корені)
+# ─────────────────────────────
+.env
+.env.*
+*.env
+*.log
+*.sqlite3
+*.py[cod]
+__pycache__/
+*.db
+
+# MacOS / Linux
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Docker
+**/db-data/
+**/postgres-data/
+**/staticfiles/
+**/media/
+**/__pycache__/
+*.pid
+docker-compose.override.yml
+
+# Python
+*.egg-info/
+*.eggs/
+*.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+pip-wheel-metadata/
+
+# Django
+**/migrations/
+**/static/
+**/media/
+**/node_modules/
+
+# React / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.env.local
+frontend/.env.*.local
+
+# Vite / npm
+**/.cache/
+**/dist/
+**/.vite/
+**/package-lock.json
+**/yarn.lock
+
+# Logs
+*.log
+*.out
+*.err
+
+# Testing
+.tox/
+.pytest_cache/
+coverage.xml
+nosetests.xml
+test-results.xml
+.cache/
+junit/
+
+# VSCode Debug / Workspace
+*.code-workspace
+*.history/
