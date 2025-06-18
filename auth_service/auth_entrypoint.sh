@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# Застосовуємо всі наявні міграції
+# Генеруємо міграції (якщо потрібно)
+python manage.py makemigrations users --noinput
+
+# Застосовуємо всі міграції
+python manage.py migrate --noinput
+
 python manage.py collectstatic --noinput
-python manage.py migrate
+
 
 DJANGO_SUPERUSER_NAME=${DJANGO_SUPERUSER_NAME:-admin}
 DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}

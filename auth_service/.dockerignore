@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+*.log
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Django static/media (якщо локально створювались)
+static/
+media/
+
+# Editor config
+.vscode/
+.idea/
+*.swp
+
+# Coverage & test
+htmlcov/
+.coverage
+.cache/
+.pytest_cache/
+
+# Migrations (опціонально)
+**/migrations/__pycache__/
+**/migrations/*.pyc

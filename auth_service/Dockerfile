@@ -1,6 +1,6 @@
 # auth_service/Dockerfile
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Уникаємо інтерактивного режиму та кешування .pyc файлів
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,4 +28,4 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Запускаємо gunicorn
-CMD ["gunicorn", "auth_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+# CMD ["gunicorn", "auth_project.wsgi:application", "--bind", "0.0.0.0:8000"]
