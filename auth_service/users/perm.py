@@ -1,10 +1,12 @@
 # users/permissions.py
 
-from rest_framework.permissions import BasePermission
-from rest_framework.request import Request
 from typing import List
 
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+
 WHITELISTED_IPS: List[str] = ["127.0.0.1"]  # локально або через .env
+
 
 class IPWhitelistPermission(BasePermission):
     def has_permission(self, request: Request, view: object) -> bool:

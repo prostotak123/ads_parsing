@@ -36,3 +36,4 @@ docker-compose up
 # 3. Збирає все без кешу
 
 # 4. Запускає чисту версію
+docker compose down --rmi all --volumes --remove-orphans && docker system prune -a -f --volumes && docker compose up --build

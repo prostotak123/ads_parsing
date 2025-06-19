@@ -37,6 +37,7 @@ docker-compose.override.yml
 .coverage.*
 htmlcov/
 dist/
+venv/
 build/
 pip-wheel-metadata/
 
@@ -44,6 +45,7 @@ pip-wheel-metadata/
 **/migrations/
 **/static/
 **/media/
+**/venv/
 **/node_modules/
 
 # React / frontend

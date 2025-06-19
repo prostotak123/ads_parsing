@@ -1,11 +1,18 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from typing import Optional
+
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 from django.utils import timezone
-from typing import Optional
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email: str, password: Optional[str] = None, **extra_fields) -> 'User':
+    def create_user(
+        self, email: str, password: Optional[str] = None, **extra_fields
+    ) -> "User":
         if not email:
             raise ValueError("Користувач повинен мати email")
         email = self.normalize_email(email)
@@ -14,9 +21,9 @@ class CustomUserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, email: str, password: str, **extra_fields) -> 'User':
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+    def create_superuser(self, email: str, password: str, **extra_fields) -> "User":
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra_fields)
 
 
@@ -29,8 +36,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = 'email'  # для входу
-    REQUIRED_FIELDS = ['username']
+    USERNAME_FIELD = "email"  # для входу
+    REQUIRED_FIELDS = ["username"]
 
     def __str__(self) -> str:
         return self.email

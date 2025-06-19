@@ -1,15 +1,14 @@
 # auth_service/users/views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import permissions
-from django.contrib.auth import get_user_model
 from typing import Any
+
+from django.contrib.auth import get_user_model
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken, TokenError
+
 from users.perm import IPWhitelistPermission
 from users.serializers import RegisterSerializer, UserSerializer
-from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework import generics
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 User = get_user_model()
 

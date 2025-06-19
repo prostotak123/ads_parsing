@@ -1,58 +1,76 @@
-version: "3.9"
-
 services:
-  auth_service:
-    build: ./auth_service
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./auth_service:/app
-    depends_on:
-      - db
-    env_file:
-      - .env
+  # auth_service:
+  #   container_name: ads_project-auth_service
+
+  #   build: ./auth_service
+  #   command: [ "python3.12", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8000" ]
+  #   ports:
+  #     - "8080:8000" # Django
+  #     - "5678:5678" # Debugpy
+  #   volumes:
+  #     - ./auth_service:/app
+  #   depends_on:
+  #     - db
+  #   env_file:
+  #     - .env
 
   core_service:
     build: ./core_service
+    command: [ "python3.12", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8001" ]
+
     ports:
       - "8001:8001"
+      - "5678:5678" # Debugpy
+
     volumes:
       - ./core_service:/app
     depends_on:
-      - redis
-      - db
+      # - redis
+      - db_core
 
-  core_worker:
-    build: ./core_service
-    command: celery -A core_project worker --loglevel=info
-    volumes:
-      - ./core_service:/app
-    depends_on:
-      - redis
+  # core_worker:
+  #   build: ./core_service
+  #   command: celery -A core_project worker --loglevel=info
+  #   volumes:
+  #     - ./core_service:/app
+  #   depends_on:
+  #     - redis
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./frontend:/app
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
 
-  db:
+  # db:
+  #   image: postgres:15
+  #   container_name: ads_project-db
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  db_core:
     image: postgres:15
-    container_name: ads_project-db
+    container_name: ads_project-db-core
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data_core:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
 volumes:
   pg_data:
+  pg_data_core:
