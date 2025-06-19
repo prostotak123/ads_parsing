@@ -6,3 +6,7 @@ djangorestframework_simplejwt==5.5.0
 djangorestframework-simplejwt[django]
 debugpy
 psycopg2-binary>=2.9
+drf-spectacular
+drf-spectacular[sidecar]
+celery 
+redis

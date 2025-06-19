@@ -2,6 +2,7 @@
 # from db.crud import save_creatives
 import asyncio
 import json
+
 from config import ADHEART_URL_CREATIVES
 from utils import safe_get, scroll_slowly_to_bottom
 

@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-5zl56)pt&8vp6^56=(q@--)w7^gorh9vsv8rcvs=)q06!l)he+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["185.223.168.195"]
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -38,15 +38,16 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "apps.core",
     "apps.workers",
-    # "apps.users",
-    # 'django.contrib.sessions',
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    'django.contrib.sessions',
     # 'django.contrib.messages',
-    # 'django.contrib.staticfiles',
+    'django.contrib.staticfiles',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    # "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -56,29 +57,35 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "core_project.urls"
 
-# TEMPLATES = [
-#     {
-#         "BACKEND": "django.template.backends.django.DjangoTemplates",
-#         "DIRS": [],
-#         "APP_DIRS": True,
-#         "OPTIONS": {
-#             "context_processors": [
-#                 "django.template.context_processors.request",
-#                 "django.contrib.auth.context_processors.auth",
-#                 "django.contrib.messages.context_processors.messages",
-#             ],
-#         },
-#     },
-# ]
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-
+SPECTACULAR_SETTINGS = {
+    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    # OTHER SETTINGS
+}
 WSGI_APPLICATION = "core_project.wsgi.application"
 
 
@@ -127,10 +134,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # AUTH_USER_MODEL = "users.User"
+
+
+
+
+# Celery
+CELERY_BROKER_URL = "redis://redis:6379/0"  # Redis як брокер
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
