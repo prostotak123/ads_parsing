@@ -15,31 +15,53 @@ services:
   #     - .env
 
   core_service:
+    container_name: ads_project-core_service
     build: ./core_service
-    command: [ "python3.12", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8001" ]
+    command: [ "python3.12", "-m", "debugpy", "--listen", "0.0.0.0:5679", "manage.py", "runserver", "0.0.0.0:8001" ]
 
     ports:
       - "8001:8001"
-      - "5678:5678" # Debugpy
+      - "5679:5679" # Debugpy
 
     volumes:
       - ./core_service:/app
     depends_on:
-      # - redis
+      - redis
+      - core_worker
       - db_core
+    env_file:
+      - .env
 
-  # core_worker:
-  #   build: ./core_service
-  #   command: celery -A core_project worker --loglevel=info
-  #   volumes:
-  #     - ./core_service:/app
-  #   depends_on:
-  #     - redis
+  core_worker:
+    container_name: ads_project-core_worker
 
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
+    build: ./core_service
+    command: celery -A core_project worker --loglevel=info
+    volumes:
+      - ./core_service:/app
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  flower:
+
+    image: mher/flower
+    build: ./core_service
+    container_name: ads_project-flower
+    command: celery -A core_project.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - core_worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
 
   # frontend:
   #   build: ./frontend
@@ -60,6 +82,7 @@ services:
   #   ports:
   #     - "5432:5432"
   db_core:
+
     image: postgres:15
     container_name: ads_project-db-core
     environment:
@@ -72,5 +95,5 @@ services:
       - "5432:5432"
 
 volumes:
-  pg_data:
+  # pg_data:
   pg_data_core:

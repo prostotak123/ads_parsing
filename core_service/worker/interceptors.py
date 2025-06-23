@@ -3,8 +3,8 @@
 import asyncio
 import json
 
-from config import ADHEART_URL_CREATIVES
-from utils import safe_get, scroll_slowly_to_bottom
+from .config import ADHEART_URL_CREATIVES
+from .utils import safe_get, scroll_slowly_to_bottom
 
 
 async def handle_creatives(page):

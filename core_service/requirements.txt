@@ -10,3 +10,6 @@ drf-spectacular
 drf-spectacular[sidecar]
 celery 
 redis
+playwright
+python_dotenv
+flower

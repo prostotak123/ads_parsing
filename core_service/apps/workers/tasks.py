@@ -26,7 +26,7 @@ def run_worker_profile(profile_id: int):
     Запускає одного воркера для профілю.
     """
     try:
-        profile = WorkerConfiguration.objects.get(id=profile_id)
+        profile = WorkerConfiguration.objects.get(id=profile_id, is_active=True)
     except WorkerConfiguration.DoesNotExist:
         return
 
@@ -42,7 +42,9 @@ def run_worker_profile(profile_id: int):
         asyncio.run(start_browser_session(scrape))
 
         log.status = "success"
-
+        profile.last_run_at = timezone.now()
+        profile.save()
+        
     except Exception as e:
         log.status = "failed"
         log.error_message = str(e)

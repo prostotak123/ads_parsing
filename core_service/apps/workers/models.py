@@ -3,15 +3,26 @@ from django.utils import timezone
 
 
 class WorkerConfiguration(models.Model):
-    user_id = models.IntegerField(db_index=True)
+    MANUAL = 'manual'
+    SCHEDULED = 'scheduled'
 
-    name = models.CharField(max_length=100)  # "adheart main"
+    SCHEDULE_CHOICES = [
+        (MANUAL, 'Manual'),
+        (SCHEDULED, 'Scheduled'),
+    ]
+
+    user_id = models.IntegerField(db_index=True)  # прив'язка до JWT-користувача
+    name = models.CharField(max_length=100)
     filter_url = models.URLField()
 
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=SCHEDULE_CHOICES,
+        default=MANUAL,
+    )
+    schedule_start = models.DateTimeField(null=True, blank=True)
+    schedule_end = models.DateTimeField(null=True, blank=True)
     frequency_minutes = models.PositiveIntegerField(default=60)
-
-    schedule_start_datetime = models.DateTimeField(null=True, blank=True)
-    schedule_end_datetime = models.DateTimeField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     last_run_at = models.DateTimeField(null=True, blank=True)
@@ -24,31 +35,28 @@ class WorkerConfiguration(models.Model):
         unique_together = ("user_id", "name")
 
     def __str__(self):
-        return f"{self.name} (User {self.user_id})"
+        return f"Profile {self.name} (User {self.user_id})"
 
-    def should_run(self) -> bool:
-        """
-        Визначає, чи можна запускати воркера в цей момент.
-        """
-        now = timezone.now()
-
+    def should_run(self):
         if not self.is_active:
             return False
 
-        if self.schedule_start_datetime and now < self.schedule_start_datetime:
+        if self.schedule_type != self.SCHEDULED:
             return False
 
-        if self.schedule_end_datetime and now > self.schedule_end_datetime:
-            self.is_active = False
-            self.save(update_fields=["is_active"])
+        now = timezone.now()
+
+        if self.schedule_start and now < self.schedule_start:
+            return False
+        if self.schedule_end and now > self.schedule_end:
             return False
 
-        if self.last_run_at:
-            elapsed = (now - self.last_run_at).total_seconds() / 60
-            if elapsed < self.frequency_minutes:
-                return False
+        if self.last_run_at is None:
+            return True
 
-        return True
+        elapsed = (now - self.last_run_at).total_seconds() / 60
+        return elapsed >= self.frequency_minutes
+
 
 
 class WorkerExecutionLog(models.Model):

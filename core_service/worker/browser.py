@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from config import ADHEART_URL_LOGIN, EMAIL, PASSWORD, STATE_PATH
+from .config import ADHEART_URL_LOGIN, EMAIL, PASSWORD, STATE_PATH
 from playwright.async_api import async_playwright
 
 proxy = {
