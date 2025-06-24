@@ -10,14 +10,15 @@ from .models import WorkerConfiguration, WorkerExecutionLog
 
 @shared_task
 def run_all_eligible_profiles():
-    """
-    Пошук усіх активних профілів, які можна запускати зараз.
-    """
+    now = timezone.now()
     eligible_profiles = WorkerConfiguration.objects.filter(is_active=True)
 
     for profile in eligible_profiles:
-        if profile.should_run():
-            run_worker_profile.delay(profile.id)
+        next_run = profile.next_run_at()
+        if next_run and next_run <= now:
+            # Перевіримо чи вже є running для цього профілю
+            if not WorkerExecutionLog.objects.filter(configuration=profile, status="running").exists():
+                run_worker_profile.delay(profile.id)
 
 
 @shared_task
@@ -44,7 +45,7 @@ def run_worker_profile(profile_id: int):
         log.status = "success"
         profile.last_run_at = timezone.now()
         profile.save()
-        
+
     except Exception as e:
         log.status = "failed"
         log.error_message = str(e)
