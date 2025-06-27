@@ -22,7 +22,7 @@ class WorkerConfigurationViewSet(viewsets.ModelViewSet):
     def run(self, request, pk=None):
         profile = self.get_object()
         run_worker_profile.delay(profile.id)
-        return Response({"status": "Запуск заплановано"})
+        return Response({"status": f"Profile {profile.id} запуск заплановано"})
 
 class WorkerExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkerExecutionLog.objects.all()
