@@ -1,30 +1,36 @@
 import { useState } from 'react';
 import { Button, TextField, Box, Alert } from '@mui/material';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { CircularProgress } from '@mui/material';
 
 function LoginPage() {
   // 🔑 Стейти для зберігання даних форми
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   // 🔑 Обробка сабміту форми
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
-      // const response = await axios.post('http://localhost:8080/login/', {
-      //   email,
-      //   password,
-      // });
-      axios.post('/api/1');
-      axios.post('/api/2');
-      console.log('Login success:', response.data);
-      // Тут будемо зберігати токени у стейт чи cookie, додамо пізніше
+      await login(email, password);
+      navigate('/');
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Login failed. Check your credentials.');
+      if (err.response?.data?.error) {
+        setError('Неправильний email або пароль');
+      } else {
+        setError('Щось пішло не так. Спробуйте ще раз пізніше.');
+      }
+    }
+    finally {
+      setLoading(false);
     }
   };
 
@@ -41,7 +47,7 @@ function LoginPage() {
         label="Email"
         type="email"
         value={email}
-        onChange={(e) (e.target.value)}
+        onChange={(e) => setEmail(e.target.value)}
         required
       />
       <TextField
@@ -51,8 +57,8 @@ function LoginPage() {
         onChange={(e) => setPassword(e.target.value)}
         required
       />
-      <Button type="submit" variant="contained">
-        Login
+      <Button type="submit" variant="contained" disabled={loading}>
+        {loading ? <CircularProgress size={24} /> : 'Login'}
       </Button>
     </Box>
   );
