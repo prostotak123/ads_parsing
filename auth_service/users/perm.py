@@ -5,7 +5,7 @@ from typing import List
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 
-WHITELISTED_IPS: List[str] = ["127.0.0.1"]  # локально або через .env
+WHITELISTED_IPS: List[str] = ["172.19.0.1"]  # локально або через .env
 
 
 class IPWhitelistPermission(BasePermission):

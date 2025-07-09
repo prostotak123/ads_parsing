@@ -44,9 +44,11 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "users",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -91,11 +93,11 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),
-        "PORT": os.getenv("POSTGRES_PORT", 5432),
+        "NAME": os.getenv("AUTH_POSTGRES_DB"),
+        "USER": os.getenv("AUTH_POSTGRES_USER"),
+        "PASSWORD": os.getenv("AUTH_POSTGRES_PASSWORD"),
+        "HOST": os.getenv("AUTH_POSTGRES_HOST", "db_auth"),
+        "PORT": os.getenv("AUTH_POSTGRES_PORT", 5432),
         "TEST": {"MIRROR": "default"},
     }
 }
@@ -143,14 +145,20 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")  # для collectstatic
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    # "EXCEPTION_HANDLER": "auth_project.utils.exceptions.custom_exception_handler",
+    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
 }
 
 SIMPLE_JWT = {
-    "BLACKLIST_AFTER_ROTATION": True,
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 AUTH_USER_MODEL = "users.User"
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
