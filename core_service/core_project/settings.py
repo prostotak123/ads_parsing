@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-5zl56)pt&8vp6^56=(q@--)w7^gorh9vsv8rcvs=)q06!l)he+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['185.223.168.195']
 
 
 # Application definition
@@ -95,11 +95,11 @@ WSGI_APPLICATION = "core_project.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": os.getenv("POSTGRES_HOST", "db_core"),
-        "PORT": os.getenv("POSTGRES_PORT", 5432),
+        "NAME": os.getenv("CORE_POSTGRES_DB"),
+        "USER": os.getenv("CORE_POSTGRES_USER"),
+        "PASSWORD": os.getenv("CORE_POSTGRES_PASSWORD"),
+        "HOST": os.getenv("CORE_POSTGRES_HOST", "db_core"),
+        "PORT": os.getenv("CORE_POSTGRES_PORT", 5433),
         "TEST": {"MIRROR": "default"},
     }
 }

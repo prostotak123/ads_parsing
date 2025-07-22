@@ -1,10 +1,12 @@
 # users/views/auth.py
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from rest_framework import permissions, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -93,7 +95,7 @@ class VerifyTokenView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         refresh_token = request.COOKIES.get("refresh_token")
@@ -103,10 +105,22 @@ class LogoutView(APIView):
 
         try:
             token = RefreshToken(refresh_token)
-            token.blacklist()  # додаємо в чорний список
+            jti = token["jti"]
+            token_obj = OutstandingToken.objects.get(jti=jti)
+
+            # 💡 Записуємо в чорний список, якщо ще не записано
+            if not BlacklistedToken.objects.filter(token=token_obj).exists():
+                BlacklistedToken.objects.create(token=token_obj)
+
+        except OutstandingToken.DoesNotExist:
+            # Якщо токен не знайдено — можливо, він уже видалений/некоректний
+            pass
+        except IntegrityError:
+            # Хтось інший уже створив цей запис (гонка) — норм
+            pass
         except TokenError as e:
             return Response({"error": str(e)}, status=400)
 
         res = Response({"detail": "Logout successful"}, status=205)
-        res.delete_cookie("refresh_token")  # очищаємо cookie
+        res.delete_cookie("refresh_token")
         return res

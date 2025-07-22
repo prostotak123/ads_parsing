@@ -8,5 +8,5 @@ ADHEART_URL_LOGIN = os.getenv("ADHEART_URL_LOGIN")
 ADHEART_URL_CREATIVES = os.getenv("ADHEART_URL_CREATIVES")
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
-HEADLESS = os.getenv("HEADLESS", "true").lower() == "true"
+HEADLESS = "true"
 STATE_PATH = os.getenv("STATE_PATH", "state.json")

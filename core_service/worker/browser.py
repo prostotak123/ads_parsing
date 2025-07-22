@@ -4,11 +4,11 @@ import os
 from .config import ADHEART_URL_LOGIN, EMAIL, PASSWORD, STATE_PATH
 from playwright.async_api import async_playwright
 
-proxy = {
-    "server": "http://91.212.82.18:64730",
-    "username": "m7yJF9ku",
-    "password": "XJ7fAsbK",
-}
+# proxy = {
+#     "server": "http://91.212.82.18:64730",
+#     "username": "m7yJF9ku",
+#     "password": "XJ7fAsbK",
+# }
 
 
 async def login(page):
