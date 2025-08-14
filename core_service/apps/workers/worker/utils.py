@@ -2,20 +2,42 @@ import asyncio
 import random
 
 
-def transform_data(data):
-    transformed_data = []
-    return transformed_data
+
+def transform_data_from_list_values(data,default=None):
+    """
+    Безпечний доступ до глибоко вкладених структур (dict + list).
+    Приклад:
+        safe_get(creative, "details", "content", "link", "url")
+        safe_get(creative, "media", 0, "url")
+    """
+    transformed_list=[]
+    for value in data:
+        tr_data=value.get("name") or value.get("link") or value.get("value")
+        transformed_list.append(tr_data)
+    return transformed_list
 
 
-def safe_get(data: dict, *keys, default=None):
+def safe_get(data, *keys, default=None):
+    """
+    Безпечний доступ до глибоко вкладених структур (dict + list).
+    Приклад:
+        safe_get(creative, "details", "content", "link", "url")
+        safe_get(creative, "media", 0, "url")
+    """
     for key in keys:
         if isinstance(data, dict):
             data = data.get(key, default)
-        # elif isinstance(data, list):
-        #     data = data[0][key] if data else data
+        elif isinstance(data, list):
+            if isinstance(key, int) and 0 <= key < len(data):
+                data = data[key]
+            else:
+                return default
         else:
             return default
+        if data is None:
+            return default
     return data
+
 
 
 async def get_last_visible_index(page):

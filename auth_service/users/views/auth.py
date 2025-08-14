@@ -6,11 +6,17 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 User = get_user_model()
+
+
+def safe_blacklist(token: RefreshToken):
+    try:
+        token.blacklist()
+    except IntegrityError:
+        pass
 
 
 class CustomLoginView(TokenObtainPairView):
@@ -52,19 +58,20 @@ class CustomRefreshView(APIView):
 
         try:
             refresh = RefreshToken(refresh_token)
+
+            # ✅ Перевірка blacklist
+            if hasattr(refresh, "check_blacklist"):
+                refresh.check_blacklist()  # Тут кине TokenError, якщо в blacklist
+
             access_token = str(refresh.access_token)
 
-            user_id = refresh["user_id"]
-            user = User.objects.get(id=user_id)
-            # Якщо включено ROTATE_REFRESH_TOKENS, оновлюємо refresh
-            if hasattr(refresh, "check_blacklist"):  # SimpleJWT з blacklist
-                refresh.blacklist()
+            # ✅ Додаємо поточний токен у blacklist
+            if hasattr(refresh, "check_blacklist"):
+                safe_blacklist(refresh)
 
-            new_refresh_token = str(RefreshToken.for_user(user))
+            new_refresh_token = str(RefreshToken.for_user(User.objects.get(id=refresh["user_id"])))
 
             res = Response({"access": access_token}, status=status.HTTP_200_OK)
-
-            # Перестворити cookie
             res.set_cookie(
                 key="refresh_token",
                 value=new_refresh_token,
@@ -73,7 +80,6 @@ class CustomRefreshView(APIView):
                 samesite="Strict",
                 max_age=7 * 24 * 60 * 60,
             )
-
             return res
 
         except TokenError as e:
@@ -95,7 +101,7 @@ class VerifyTokenView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         refresh_token = request.COOKIES.get("refresh_token")
@@ -105,22 +111,10 @@ class LogoutView(APIView):
 
         try:
             token = RefreshToken(refresh_token)
-            jti = token["jti"]
-            token_obj = OutstandingToken.objects.get(jti=jti)
-
-            # 💡 Записуємо в чорний список, якщо ще не записано
-            if not BlacklistedToken.objects.filter(token=token_obj).exists():
-                BlacklistedToken.objects.create(token=token_obj)
-
-        except OutstandingToken.DoesNotExist:
-            # Якщо токен не знайдено — можливо, він уже видалений/некоректний
-            pass
-        except IntegrityError:
-            # Хтось інший уже створив цей запис (гонка) — норм
-            pass
+            safe_blacklist(token)  # додаємо в чорний список
         except TokenError as e:
             return Response({"error": str(e)}, status=400)
 
         res = Response({"detail": "Logout successful"}, status=205)
-        res.delete_cookie("refresh_token")
+        res.delete_cookie("refresh_token")  # очищаємо cookie
         return res

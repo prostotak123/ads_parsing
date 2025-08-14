@@ -21,8 +21,11 @@ class WorkerConfigurationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def run(self, request, pk=None):
         profile = self.get_object()
-        run_worker_profile.delay(profile.id)
+        filter_url = profile.filter_url
+        print(f"Profile {profile.id} запуск заплановано")
+        run_worker_profile.delay(profile.id, filter_url=filter_url)
         return Response({"status": f"Profile {profile.id} запуск заплановано"})
+
 
 class WorkerExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkerExecutionLog.objects.all()

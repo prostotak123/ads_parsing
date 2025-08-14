@@ -19,15 +19,22 @@ function App() {
             </PublicOnlyRoute>
           } />
 
-          <Route
+          {/* <Route
             index
             element={
               <ProtectedRoute>
                 <WorkerSettingsPage />
               </ProtectedRoute>
             }
+          /> */}
+          <Route
+            path="workers/run"
+            element={
+              <ProtectedRoute>
+                <WorkerRunPage />
+              </ProtectedRoute>
+            }
           />
-
           <Route
             path="workers/settings"
             element={
@@ -37,14 +44,7 @@ function App() {
             }
           />
 
-          <Route
-            path="workers/run"
-            element={
-              <ProtectedRoute>
-                <WorkerRunPage />
-              </ProtectedRoute>
-            }
-          />
+
 
           <Route
             path="data"

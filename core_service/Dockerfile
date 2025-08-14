@@ -1,18 +1,3 @@
-# FROM python:3.12-slim
-
-# WORKDIR /app
-
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# # Встановлюємо Playwright і потрібні браузери
-# RUN playwright install --with-deps
-
-# COPY . .
-
-# CMD ["python", "worker/main.py"]
-# auth_service/Dockerfile
-
 FROM python:3.12-slim
 
 # Уникаємо інтерактивного режиму та кешування .pyc файлів

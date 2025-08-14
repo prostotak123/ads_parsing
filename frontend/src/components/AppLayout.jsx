@@ -17,25 +17,37 @@ function AppLayout() {
     <>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/workers/run"
+            sx={{
+              flexGrow: 1,
+              textDecoration: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
             Ads Project
           </Typography>
           {isAuthenticated ? (
             <>
-              <Typography variant="body1" sx={{ marginRight: 2 }}>
+              {/* <Typography variant="body1" sx={{ marginRight: 2 }}>
                 {user.username}
-              </Typography>
+              </Typography> */}
 
               <Button color="inherit" onClick={handleLogout}>
                 Logout
               </Button>
 
-              <Button color="inherit" component={RouterLink} to="/workers/settings">
-                Worker Settings
-              </Button>
               <Button color="inherit" component={RouterLink} to="/workers/run">
                 Run Worker
               </Button>
+
+              <Button color="inherit" component={RouterLink} to="/workers/settings">
+                Worker Settings
+              </Button>
+
               <Button color="inherit" component={RouterLink} to="/data">
                 Data
               </Button>

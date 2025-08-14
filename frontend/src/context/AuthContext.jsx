@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import authApi from '../api/authApi';
-import { CircularProgress, Box } from '@mui/material';
+import { setupAxiosInterceptors } from '../api/setupAxiosInterceptors';
+import { useRef } from 'react';
+
 
 // Створення контексту
 const AuthContext = createContext();
@@ -10,6 +12,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null); // 👈 тут буде зберігатись користувач
     const [accessToken, setAccessToken] = useState(null);
     const [isLoading, setIsLoading] = useState(true); // 👈 нове
+    const tokenRef = useRef(null);
 
     const isAuthenticated = !!user;
 
@@ -48,7 +51,10 @@ export const AuthProvider = ({ children }) => {
         const checkAuth = async () => {
             try {
                 const res = await authApi.post('/api/auth/token/refresh/');
+                console.log('auth_context,refresh:', res);
+
                 const newAccess = res.data.access;
+                console.log('auth_context,new_token:', res.data.access);
                 setAccessToken(newAccess);
 
                 const profile = await authApi.get('/api/auth/profile/', {
@@ -66,26 +72,18 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
     }, []);
 
-    if (isLoading) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    height: '100vh',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}
-            >
-                <CircularProgress />
-            </Box>
-        );
-    }
-    
+    useEffect(() => {
+        tokenRef.current = accessToken;
+    }, [accessToken]);
+    useEffect(() => {
+        setupAxiosInterceptors(() => tokenRef.current, setAccessToken, logout);
+    }, []);
     return (
-        <AuthContext.Provider value={{ user, accessToken, login, logout, isAuthenticated }}>
+        <AuthContext.Provider value={{ user, accessToken, login, logout, isAuthenticated, isLoading }}>
             {children}
         </AuthContext.Provider>
     );
+
 };
 
 // 👇 зручно викликати з будь-якого місця

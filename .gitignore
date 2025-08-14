@@ -6,6 +6,8 @@
 *.env
 *.log
 *.sqlite3
+*.sqlite3-journal
+
 *.py[cod]
 __pycache__/
 *.db
@@ -47,6 +49,8 @@ pip-wheel-metadata/
 **/media/
 **/venv/
 **/node_modules/
+core_service/state.json
+core_service/formatted_results.json
 
 # React / frontend
 frontend/node_modules/
