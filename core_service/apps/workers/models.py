@@ -1,7 +1,9 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.contrib.postgres.fields import ArrayField  # 👈 обов’язково для PostgreSQL
 from django.db import models
-from django.utils import timezone
+from django.utils import timezone as dj_tz
 
 
 class WorkerConfiguration(models.Model):
@@ -61,54 +63,58 @@ class WorkerConfiguration(models.Model):
 
     class Meta:
         db_table = "worker_configuration"
-
         ordering = ["-updated_at"]
-        unique_together = ("user_id", "name")
+        constraints = [
+            models.UniqueConstraint(fields=["user_id", "name"], name="unique_user_name"),
+            models.UniqueConstraint(
+                fields=["user_id", "filter_url", "schedule_type"], name="unique_user_filter_schedule"
+            ),
+        ]
 
     def __str__(self):
         return f"Profile {self.name} (User {self.user_id})"
 
-    def next_run_at(self):
-        now = timezone.now()
+    def next_run_at(self, *, ref=None):
+        now_utc = ref or dj_tz.now()  # aware UTC
 
         match self.schedule_type:
             case self.MANUAL:
-                return None  # Мануальний профіль запускається тільки руками
+                return None
+
             case self.SCHEDULED_ONCE:
-                return self.schedule_time
+                # Якщо вже був запуск і час запуску новий, то запускаємо
+                if self.last_run_at and self.schedule_time and self.last_run_at < self.schedule_time:
+                    return self.schedule_time  # Якщо останній запуск був до нового часу
+
+                # Якщо профіль не був ще запущений, то запускаємо на schedule_time
+                if not self.last_run_at and self.schedule_time:
+                    return self.schedule_time
+
+                # Якщо вже був запуск, не запускаємо більше
+                return None
+
             case self.DAILY:
-                if self.schedule_time:
-                    today_run = self.schedule_time.replace(year=now.year, month=now.month, day=now.day)
-                    if today_run < now:
-                        today_run = today_run + timezone.timedelta(days=1)
-                    return today_run
+                if not self.daily_run_time:
+                    return None
+                kyiv = ZoneInfo("Europe/Kyiv")
+                now_local = now_utc.astimezone(kyiv)
+                candidate_local = datetime(
+                    now_local.year,
+                    now_local.month,
+                    now_local.day,
+                    self.daily_run_time.hour,
+                    self.daily_run_time.minute,
+                    self.daily_run_time.second,
+                    tzinfo=kyiv,
+                )
+                if candidate_local <= now_local:
+                    candidate_local += timedelta(days=1)
+                return candidate_local.astimezone(ZoneInfo("UTC"))
+
             case self.INTERVAL:
                 if self.last_run_at:
-                    return self.last_run_at + timezone.timedelta(minutes=self.frequency_minutes)
-                else:
-                    return now  # Якщо ніколи не запускався — можна запускати одразу
-
-        return None
-
-    def should_run(self):
-        if not self.is_active:
-            return False
-
-        if self.schedule_type != self.MANUAL:
-            return False
-
-        now = timezone.now()
-
-        if self.schedule_start and now < self.schedule_start:
-            return False
-        if self.schedule_end and now > self.schedule_end:
-            return False
-
-        if self.last_run_at is None:
-            return True
-
-        elapsed = (now - self.last_run_at).total_seconds() / 60
-        return elapsed >= self.frequency_minutes
+                    return self.last_run_at + timedelta(minutes=self.frequency_minutes or 0)
+                return now_utc
 
 
 class WorkerExecutionLog(models.Model):

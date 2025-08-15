@@ -162,7 +162,7 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
     "run-eligible-workers-every-5min": {
         "task": "apps.workers.tasks.run_all_eligible_profiles",
-        "schedule": 10.0,  # кожні 5 хвилин
+        "schedule": 30.0,  # кожні 5 хвилин
     },
 }
 

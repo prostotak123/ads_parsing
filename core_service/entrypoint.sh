@@ -4,8 +4,8 @@ set -e
 echo "➡️ Entrypoint запущено з командою: $@"
 
 # Встановлюємо браузери перед будь-чим (бо потрібні й для celery, і для runserver)
-echo "🔧 Installing Playwright browsers if needed..."
-python3 -m playwright install --with-deps || true
+# echo "🔧 Installing Playwright browsers if needed..."
+# python3 -m playwright install --with-deps || true
 
 # Якщо запускається Celery — не виконуємо міграції
 if [[ "$@" == *"celery"* ]]; then

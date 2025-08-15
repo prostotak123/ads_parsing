@@ -1,7 +1,6 @@
-import datetime
-
 import pytz
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone
 
 from .models import WorkerConfiguration, WorkerExecutionLog
@@ -14,17 +13,34 @@ kiev_tz = pytz.timezone("Europe/Kiev")
 
 @shared_task
 def run_all_eligible_profiles():
-    now = datetime.datetime.now(tz=kiev_tz)
-    now1 = datetime.datetime.now(tz=kiev_tz)
-    print(now1)
-    eligible_profiles = WorkerConfiguration.objects.filter(is_active=True)
+    now = timezone.now()  # ✅ AWARE-UTC
+    # мінімізуй кількість об'єктів у пам'ять (тільки потрібні поля)
+    qs = WorkerConfiguration.objects.filter(is_active=True).only(
+        "id", "filter_url", "schedule_type", "daily_run_time", "last_run_at",
+        "schedule_time", "schedule_start", "schedule_end"
+    )
 
-    for profile in eligible_profiles:
-        next_run = profile.next_run_at()
-        if next_run and next_run <= now:
-            # Перевіримо чи вже є running для цього профілю
-            if not WorkerExecutionLog.objects.filter(configuration=profile, status="running").exists():
-                run_worker_profile.delay(profile.id, profile.filter_url)
+    for profile in qs:
+        next_run = profile.next_run_at(ref=now)  # ✅ повертає AWARE-UTC
+        if not next_run or next_run > now:
+            continue
+
+        # ✅ антигонка: піднімаємо "running" лог атомарно
+        with transaction.atomic():
+            already_running = WorkerExecutionLog.objects.select_for_update(skip_locked=True).filter(
+                configuration=profile, status="running"
+            ).exists()
+            if already_running:
+                continue
+
+            # Створюємо лог "running" тут, щоб навіть два beat-транча не стартанули двічі
+            WorkerExecutionLog.objects.create(configuration=profile, status="running")
+            profile.current_status = WorkerConfiguration.STATUS_RUNNING
+            profile.last_run_at = now
+            profile.save(update_fields=["current_status", "last_run_at"])
+
+        # Поза транзакцією — відправляємо Celery-задачу
+        run_worker_profile.delay(profile.id, profile.filter_url)
 
 
 @shared_task

@@ -5,6 +5,8 @@ x-core-build: &core-build
   image: ads_project-core_image
   volumes:
     - ./core_service:/app
+    - playwright_cache:/root/.cache/ms-playwright
+
   env_file:
     - .env
 
@@ -34,7 +36,6 @@ services:
       - "127.0.0.1:5679:5679"
     depends_on:
       - redis
-      - core_worker
       - db_core
 
   core_worker:
@@ -46,6 +47,7 @@ services:
     depends_on:
       - redis
       - db_core
+      - core_service
 
   core_beat:
     <<: *core-build
@@ -53,6 +55,7 @@ services:
     depends_on:
       - redis
       - db_core
+      - core_service
 
   flower:
     <<: *core-build
@@ -62,6 +65,9 @@ services:
     depends_on:
       - redis
       - core_worker
+      - core_service
+      - core_beat
+
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
 
@@ -107,3 +113,4 @@ services:
 volumes:
   pg_data_core:
   pg_db_auth:
+  playwright_cache:
