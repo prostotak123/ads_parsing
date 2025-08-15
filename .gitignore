@@ -49,8 +49,8 @@ pip-wheel-metadata/
 **/media/
 **/venv/
 **/node_modules/
-core_service/state.json
-core_service/formatted_results.json
+core_service/*.json
+# core_service/formatted_results.json
 
 # React / frontend
 frontend/node_modules/
