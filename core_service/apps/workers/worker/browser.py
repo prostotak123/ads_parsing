@@ -1,34 +1,48 @@
+# apps/workers/worker/browser.py
 import asyncio
 import os
+from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
-from .config import ADHEART_URL_LOGIN, EMAIL, PASSWORD, STATE_PATH
-from playwright.async_api import async_playwright
+from .config import ADHEART_URL_LOGIN, ADHEART_URL_DASHBOARD, EMAIL, PASSWORD, STATE_PATH
+
+AUTH_PROOF_SELECTOR = "div.swiper-slide.sc-7780ff0-1.kRGDPU.swiper-slide-active"
 
 
 async def login(page):
-    await page.goto(ADHEART_URL_LOGIN)
+    """Вхід + збереження STATE_PATH."""
+    await page.goto(ADHEART_URL_LOGIN, wait_until="domcontentloaded")
     await page.fill('input[type="email"]', EMAIL)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('[data-cy="button-submit"]')
-    await page.wait_for_timeout(1500)
-    cookies = await page.context.cookies()
+    # чекаємо появу елемента, який буває тільки після авторизації
+    await page.wait_for_selector(AUTH_PROOF_SELECTOR, timeout=20000)
+    await page.context.storage_state(path=STATE_PATH)
+
+
+async def is_logged_in(page) -> bool:
+    """Перевіряє, чи ще жива сесія (куки з STATE_PATH)."""
+    try:
+        await page.goto(ADHEART_URL_DASHBOARD, wait_until="networkidle")
+        await page.wait_for_selector(AUTH_PROOF_SELECTOR, timeout=5000)
+        return True
+    except PWTimeout:
+        return False
 
 
 async def start_browser_session(callback):
     async with async_playwright() as p:
-        # browser = await p.chromium.launch(slow_mo=100, headless=True, proxy=proxy)
         browser = await p.chromium.launch(slow_mo=100, headless=True)
         context = await browser.new_context(
             storage_state=STATE_PATH if os.path.exists(STATE_PATH) else None
         )
         page = await context.new_page()
 
-        if not os.path.exists(STATE_PATH):
+        # якщо стейту нема або він протух → робимо логін
+        if not os.path.exists(STATE_PATH) or not await is_logged_in(page):
             await login(page)
-            await asyncio.sleep(30)
-        await page.wait_for_timeout(10000)
-        await context.storage_state(path=STATE_PATH)
-        await callback(page)
-        await asyncio.sleep(5)
 
+        # тепер гарантовано авторизовані
+        await callback(page)
+
+        await asyncio.sleep(2)
         await browser.close()

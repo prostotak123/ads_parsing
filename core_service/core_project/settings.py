@@ -155,7 +155,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Celery
-CELERY_BROKER_URL = "redis://redis:6379/0"  # Redis як брокер
+CELERY_BROKER_URL = "redis://:my-secure-password@redis:6379/0"  # Redis з паролем як брокер
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"

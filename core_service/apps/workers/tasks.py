@@ -16,8 +16,14 @@ def run_all_eligible_profiles():
     now = timezone.now()  # ✅ AWARE-UTC
     # мінімізуй кількість об'єктів у пам'ять (тільки потрібні поля)
     qs = WorkerConfiguration.objects.filter(is_active=True).only(
-        "id", "filter_url", "schedule_type", "daily_run_time", "last_run_at",
-        "schedule_time", "schedule_start", "schedule_end"
+        "id",
+        "filter_url",
+        "schedule_type",
+        "daily_run_time",
+        "last_run_at",
+        "schedule_time",
+        "schedule_start",
+        "schedule_end",
     )
 
     for profile in qs:
@@ -27,9 +33,8 @@ def run_all_eligible_profiles():
 
         # ✅ антигонка: піднімаємо "running" лог атомарно
         with transaction.atomic():
-            already_running = WorkerExecutionLog.objects.select_for_update(skip_locked=True).filter(
-                configuration=profile, status="running"
-            ).exists()
+            already_running = profile.current_status == WorkerConfiguration.STATUS_RUNNING
+
             if already_running:
                 continue
 
@@ -56,7 +61,7 @@ def run_worker_profile(profile_id: int, filter_url: str):
     log = WorkerExecutionLog.objects.create(configuration=profile)
 
     # одразу ставимо статус "running"
-    profile.current_status = "running"
+    profile.current_status = WorkerConfiguration.STATUS_RUNNING
     profile.save(update_fields=["current_status"])
 
     try:

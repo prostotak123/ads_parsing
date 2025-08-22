@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 ADHEART_URL_LOGIN = os.getenv("ADHEART_URL_LOGIN")
-ADHEART_URL_CREATIVES = os.getenv("ADHEART_URL_CREATIVES")
+ADHEART_URL_DASHBOARD = os.getenv("ADHEART_URL_DASHBOARD")
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 HEADLESS = "true"

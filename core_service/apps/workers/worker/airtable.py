@@ -110,7 +110,7 @@ async def send_to_airtable_in_batches(records: list[dict]):
     Дуже простий варіант: шле по одному в циклі (але вже через один виклик).
     Хочеш — пізніше замінимо на справжній batch_upsert.
     """
-    table = get_airtable_table()
+    # table = get_airtable_table()
 
     # по-хорошому тут зробити справжній batch_upsert з key_fields=["Adheart ID"].
     # але щоб нічого не ламати зараз — просто існуючу функцію:
@@ -121,24 +121,3 @@ async def send_to_airtable_in_batches(records: list[dict]):
             print(f"⚠ Airtable send failed: {e}")
         # трішки тротлінгу, щоб не нарватися на ліміт
         await asyncio.sleep(0.2)
-# 👇 Тестовий креатив
-# test_creative = {
-#     "adheart_link": "https://adheart.me/uk/ads?detailsId=s_1418564469290524",
-#     "media_link": "https://ms-6.adheart.me/adheart/teasers/images/2/8/s_1418564469290524_images_0.jpg",
-#     "text": "🚨 LETZTE CHANCE – Sommeraktion VERLÄNGERT! ...",
-#     "geo": "DE",
-#     "platform": "Instagram",
-#     "creation_date": "2025-07-22",
-#     "language": "DE",
-#     "funpage_link": "https://www.facebook.com/61577700066278/",
-#     "coverage": [
-#         "Чоловіки(18-24) - 25.46%",
-#         "Чоловіки(25-34) - 15.91%",
-#         "Жінки(18-24) - 11.73%",
-#     ],
-#     "active_days": 6,
-# }
-
-# # 🔁 Виклик
-# if __name__ == "__main__":
-#     save_creative_to_airtable(test_creative)

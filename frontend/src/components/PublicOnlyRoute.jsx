@@ -6,7 +6,8 @@ function PublicOnlyRoute({ children }) {
     const { isAuthenticated } = useAuth();
 
     if (isAuthenticated) {
-        return <Navigate to="/" replace />;
+        console.log('isAuthenticated', isAuthenticated);
+        return <Navigate to="/workers/settings" replace />;
     }
 
     return children;

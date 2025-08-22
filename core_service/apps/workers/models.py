@@ -82,6 +82,7 @@ class WorkerConfiguration(models.Model):
                 return None
 
             case self.SCHEDULED_ONCE:
+                print(self.name)
                 # Якщо вже був запуск і час запуску новий, то запускаємо
                 if self.last_run_at and self.schedule_time and self.last_run_at < self.schedule_time:
                     return self.schedule_time  # Якщо останній запуск був до нового часу
