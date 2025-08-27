@@ -77,11 +77,11 @@ async def handle_creatives(page, filter_url: str):
                 
                 intercepted_test["creatives"].extend(creatives)
 
-                with open("formatted_results.json", "w", encoding="utf-8") as f:
-                    json.dump(transformed, f, indent=2, ensure_ascii=False)
+                # with open("formatted_results.json", "w", encoding="utf-8") as f:
+                #     json.dump(transformed, f, indent=2, ensure_ascii=False)
 
-                with open("formatted_results_test.json", "w", encoding="utf-8") as f:
-                    json.dump(intercepted_test, f, indent=2, ensure_ascii=False)
+                # with open("formatted_results_test.json", "w", encoding="utf-8") as f:
+                #     json.dump(intercepted_test, f, indent=2, ensure_ascii=False)
             except Exception as e:
                 print(f"⚠ Failed to parse response from {response.url}: {e}")
 

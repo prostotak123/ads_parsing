@@ -7,7 +7,13 @@ import {
   TextField,
   MenuItem,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Box,
+  Typography,
+  Paper,
+  Divider,
+  alpha,
+  useTheme
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 import {
@@ -17,13 +23,23 @@ import {
 } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import {
+  Schedule,
+  Link as LinkIcon,
+  AccessTime,
+  Event,
+  Repeat,
+  Today
+} from '@mui/icons-material';
 
 const scheduleOptions = [
-  { value: 'manual', label: 'Manual' },
-  { value: 'scheduled_once', label: 'One-time' },
-  { value: 'interval', label: 'Interval' },
-  { value: 'daily', label: 'Daily' }
+  { value: 'manual', label: 'Manual', icon: <Schedule fontSize="small" /> },
+  { value: 'scheduled_once', label: 'One-time', icon: <Event fontSize="small" /> },
+  { value: 'interval', label: 'Interval', icon: <Repeat fontSize="small" /> },
+  { value: 'daily', label: 'Daily', icon: <Today fontSize="small" /> }
 ];
+
+const baseURL = import.meta.env.VITE_CORE_PARSER_URL;
 
 const sanitizeFormData = (form) => {
   const cleaned = { ...form };
@@ -43,8 +59,6 @@ const sanitizeFormData = (form) => {
 
     case 'daily':
       cleaned.schedule_time = null;
-      // cleaned.schedule_start = null;
-      // cleaned.schedule_end = null;
       cleaned.frequency_minutes = null;
       break;
 
@@ -63,6 +77,7 @@ const sanitizeFormData = (form) => {
 
 function WorkerForm({ open, onClose, onSave, onError, initialData }) {
   const [errors, setErrors] = useState({});
+  const theme = useTheme();
   const [form, setForm] = useState({
     name: '',
     filter_url: '',
@@ -102,10 +117,10 @@ function WorkerForm({ open, onClose, onSave, onError, initialData }) {
     }));
 
     if (name === 'filter_url') {
-      if (!value.startsWith('https://adheart.me/')) {
+      if (!value.startsWith(baseURL)) {
         setErrors((prev) => ({
           ...prev,
-          filter_url: 'URL повинен починатися з https://adheart.me/'
+          filter_url: `URL повинен починатися з ${baseURL}`
         }));
       } else {
         setErrors((prev) => ({ ...prev, filter_url: '' }));
@@ -135,8 +150,8 @@ function WorkerForm({ open, onClose, onSave, onError, initialData }) {
     e.preventDefault();
 
     const newErrors = {};
-    if (!form.filter_url.startsWith('https://adheart.me/')) {
-      newErrors.filter_url = 'Посилання повинне починатися з https://adheart.me/';
+    if (!form.filter_url.startsWith(baseURL)) {
+      newErrors.filter_url = `Посилання повинне починатися з ${baseURL}`;
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -164,230 +179,410 @@ function WorkerForm({ open, onClose, onSave, onError, initialData }) {
     }
   };
 
+  const selectedOption = scheduleOptions.find(opt => opt.value === form.schedule_type);
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      paper={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        }
+      }}
+    >
       <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {initialData ? 'Редагування профілю' : 'Новий профіль'}
-        </DialogTitle>
-        <DialogContent
-          dividers
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}
-        >
-          <TextField
-            label="Назва профілю"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            error={!!errors.name}
-            helperText={errors.name}
-            fullWidth
-          />
-
-          <TextField
-            label="URL фільтру"
-            name="filter_url"
-            value={form.filter_url}
-            onChange={handleChange}
-            error={!!errors.filter_url}
-            helperText={
-              errors.filter_url || 'Наприклад: https://adheart.me/search?...'
-            }
-            fullWidth
-          />
-
-          <TextField
-            select
-            label="Тип розкладу"
-            name="schedule_type"
-            value={form.schedule_type}
-            onChange={handleChange}
-            fullWidth
+        {/* Modern Header */}
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
           >
-            {scheduleOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            {initialData ? 'Редагування профілю' : 'Новий профіль'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {initialData ? 'Змініть параметри існуючого профілю' : 'Створіть новий профіль для парсингу'}
+          </Typography>
+        </DialogTitle>
 
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            {form.schedule_type === 'scheduled_once' && (
-              <DateTimePicker
-                label="Дата та час запуску"
-                value={form.schedule_time ? dayjs(form.schedule_time) : null}
-                onChange={handleDateChange('schedule_time')}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    margin: 'dense',
-                    error: !!errors.schedule_time,
-                    helperText: errors.schedule_time
-                  }
-                }}
-              />
-            )}
+        <Divider />
 
-            {form.schedule_type === 'interval' && (
-              <>
-                <DateTimePicker
-                  label="Початок"
-                  value={form.schedule_start ? dayjs(form.schedule_start) : null}
-                  onChange={(newValue) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      schedule_start: newValue?.toISOString() || ''
-                    }));
-                    setErrors((prev) => {
-                      const newErrors = { ...prev };
-                      delete newErrors.schedule_start;
-                      return newErrors;
-                    });
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'dense',
-                      error: !!errors.schedule_start,
-                      helperText: errors.schedule_start
-                    }
-                  }}
-                />
+        <DialogContent sx={{ py: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-                <DateTimePicker
-                  label="Кінець"
-                  value={form.schedule_end ? dayjs(form.schedule_end) : null}
-                  onChange={(newValue) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      schedule_end: newValue?.toISOString() || ''
-                    }));
-                    setErrors((prev) => {
-                      const newErrors = { ...prev };
-                      delete newErrors.schedule_end;
-                      return newErrors;
-                    });
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'dense',
-                      error: !!errors.schedule_end,
-                      helperText: errors.schedule_end
+            {/* Basic Info Section */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.primary.main, 0.1),
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LinkIcon color="primary" />
+                Основна інформація
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  label="Назва профілю"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  fullWidth
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                     }
                   }}
                 />
 
                 <TextField
-                  label="Інтервал (хвилини)"
-                  name="frequency_minutes"
-                  type="number"
-                  value={form.frequency_minutes}
+                  label="URL фільтру"
+                  name="filter_url"
+                  value={form.filter_url}
                   onChange={handleChange}
-                  error={!!errors.frequency_minutes}
-                  helperText={errors.frequency_minutes}
-                  fullWidth
-                />
-              </>
-            )}
-
-            {form.schedule_type === 'daily' && (
-              <>
-                <DateTimePicker
-                  label="Початок"
-                  value={form.schedule_start ? dayjs(form.schedule_start) : null}
-                  onChange={(newValue) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      schedule_start: newValue?.toISOString() || ''
-                    }));
-                    setErrors((prev) => {
-                      const newErrors = { ...prev };
-                      delete newErrors.schedule_start;
-                      return newErrors;
-                    });
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'dense',
-                      error: !!errors.schedule_start,
-                      helperText: errors.schedule_start
-                    }
-                  }}
-                />
-
-                <DateTimePicker
-                  label="Кінець"
-                  value={form.schedule_end ? dayjs(form.schedule_end) : null}
-                  onChange={(newValue) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      schedule_end: newValue?.toISOString() || ''
-                    }));
-                    setErrors((prev) => {
-                      const newErrors = { ...prev };
-                      delete newErrors.schedule_end;
-                      return newErrors;
-                    });
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'dense',
-                      error: !!errors.schedule_end,
-                      helperText: errors.schedule_end
-                    }
-                  }}
-                />
-
-                <TimePicker
-                  label="Щоденний запуск"
-                  value={
-                    form.daily_run_time
-                      ? dayjs(`1970-01-01T${form.daily_run_time}`)
-                      : null
+                  error={!!errors.filter_url}
+                  helperText={
+                    errors.filter_url || `Наприклад: ${baseURL}search...`
                   }
-                  onChange={(newValue) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      daily_run_time:
-                        newValue?.toDate().toTimeString().slice(0, 8) || ''
-                    }));
-                    setErrors((prev) => {
-                      const newErrors = { ...prev };
-                      delete newErrors.daily_run_time;
-                      return newErrors;
-                    });
-                  }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      margin: 'dense',
-                      error: !!errors.daily_run_time,
-                      helperText: errors.daily_run_time
+                  fullWidth
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
                     }
                   }}
                 />
-              </>
-            )}
-          </LocalizationProvider>
+              </Box>
+            </Paper>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={form.is_active}
+            {/* Schedule Type Section */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                bgcolor: alpha(theme.palette.info.main, 0.02),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.info.main, 0.1),
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                {selectedOption?.icon}
+                Тип розкладу
+              </Typography>
+
+              <TextField
+                select
+                label="Тип розкладу"
+                name="schedule_type"
+                value={form.schedule_type}
                 onChange={handleChange}
-                name="is_active"
+                fullWidth
+                variant="outlined"
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  }
+                }}
+              >
+                {scheduleOptions.map((option) => (
+                  <MenuItem
+                    key={option.value}
+                    value={option.value}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {/* Schedule Configuration */}
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                {form.schedule_type === 'scheduled_once' && (
+                  <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <DateTimePicker
+                      label="Дата та час запуску"
+                      value={form.schedule_time ? dayjs(form.schedule_time) : null}
+                      onChange={handleDateChange('schedule_time')}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!errors.schedule_time,
+                          helperText: errors.schedule_time,
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {form.schedule_type === 'interval' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <DateTimePicker
+                        label="Початок"
+                        value={form.schedule_start ? dayjs(form.schedule_start) : null}
+                        onChange={(newValue) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            schedule_start: newValue?.toISOString() || ''
+                          }));
+                          setErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.schedule_start;
+                            return newErrors;
+                          });
+                        }}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: !!errors.schedule_start,
+                            helperText: errors.schedule_start,
+                            sx: {
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                              }
+                            }
+                          }
+                        }}
+                      />
+
+                      <DateTimePicker
+                        label="Кінець"
+                        value={form.schedule_end ? dayjs(form.schedule_end) : null}
+                        onChange={(newValue) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            schedule_end: newValue?.toISOString() || ''
+                          }));
+                          setErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.schedule_end;
+                            return newErrors;
+                          });
+                        }}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: !!errors.schedule_end,
+                            helperText: errors.schedule_end,
+                            sx: {
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    <TextField
+                      label="Інтервал (хвилини)"
+                      name="frequency_minutes"
+                      type="number"
+                      value={form.frequency_minutes}
+                      onChange={handleChange}
+                      error={!!errors.frequency_minutes}
+                      helperText={errors.frequency_minutes}
+                      fullWidth
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {form.schedule_type === 'daily' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <DateTimePicker
+                        label="Початок"
+                        value={form.schedule_start ? dayjs(form.schedule_start) : null}
+                        onChange={(newValue) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            schedule_start: newValue?.toISOString() || ''
+                          }));
+                          setErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.schedule_start;
+                            return newErrors;
+                          });
+                        }}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: !!errors.schedule_start,
+                            helperText: errors.schedule_start,
+                            sx: {
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                              }
+                            }
+                          }
+                        }}
+                      />
+
+                      <DateTimePicker
+                        label="Кінець"
+                        value={form.schedule_end ? dayjs(form.schedule_end) : null}
+                        onChange={(newValue) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            schedule_end: newValue?.toISOString() || ''
+                          }));
+                          setErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.schedule_end;
+                            return newErrors;
+                          });
+                        }}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: !!errors.schedule_end,
+                            helperText: errors.schedule_end,
+                            sx: {
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    <TimePicker
+                      label="Щоденний запуск"
+                      value={
+                        form.daily_run_time
+                          ? dayjs(`1970-01-01T${form.daily_run_time}`)
+                          : null
+                      }
+                      onChange={(newValue) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          daily_run_time:
+                            newValue?.toDate().toTimeString().slice(0, 8) || ''
+                        }));
+                        setErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.daily_run_time;
+                          return newErrors;
+                        });
+                      }}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!errors.daily_run_time,
+                          helperText: errors.daily_run_time,
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+              </LocalizationProvider>
+            </Paper>
+
+            {/* Settings Section */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                bgcolor: alpha(theme.palette.success.main, 0.02),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.success.main, 0.1),
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AccessTime color="success" />
+                Налаштування
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={form.is_active}
+                    onChange={handleChange}
+                    name="is_active"
+                    sx={{
+                      '&.Mui-checked': {
+                        color: 'success.main',
+                      }
+                    }}
+                  />
+                }
+                label={
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    Активний профіль
+                  </Typography>
+                }
               />
-            }
-            label="Активний"
-          />
+            </Paper>
+          </Box>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>Скасувати</Button>
-          <Button variant="contained" type="submit">
+        <Divider />
+
+        {/* Modern Actions */}
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 3
+            }}
+          >
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            type="submit"
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              }
+            }}
+          >
             Зберегти
           </Button>
         </DialogActions>

@@ -95,26 +95,75 @@ class WorkerConfiguration(models.Model):
                 return None
 
             case self.DAILY:
-                if not self.daily_run_time:
+                # Згідно валідації, всі ці поля обов'язкові для DAILY
+                if not (self.daily_run_time and self.schedule_start and self.schedule_end):
                     return None
-                kyiv = ZoneInfo("Europe/Kyiv")
-                now_local = now_utc.astimezone(kyiv)
-                candidate_local = datetime(
-                    now_local.year,
-                    now_local.month,
-                    now_local.day,
-                    self.daily_run_time.hour,
-                    self.daily_run_time.minute,
-                    self.daily_run_time.second,
-                    tzinfo=kyiv,
-                )
-                if candidate_local <= now_local:
-                    candidate_local += timedelta(days=1)
-                return candidate_local.astimezone(ZoneInfo("UTC"))
+
+                # Якщо поточний час поза межами дозволеного періоду
+                if now_utc < self.schedule_start:
+                    return None
+
+                if now_utc > self.schedule_end:
+                    return None
+
+                # Якщо немає останнього запуску - перший запуск в schedule_start
+                if not self.last_run_at:
+                    return self.schedule_start if self.schedule_start >= now_utc else now_utc
+
+                # Перевіряємо чи був запуск сьогодні
+                last_run_date = self.last_run_at.date()
+                now_date = now_utc.date()
+
+                # Якщо останній запуск був сьогодні - переносимо на завтра
+                if last_run_date == now_date:
+                    # Наступний запуск завтра о daily_run_time
+                    next_run = datetime.combine(
+                        now_date + timedelta(days=1), self.daily_run_time, tzinfo=ZoneInfo("UTC")
+                    )
+                else:
+                    # Можемо запускати сьогодні о daily_run_time або зараз
+                    today_run_time = datetime.combine(now_date, self.daily_run_time, tzinfo=ZoneInfo("UTC"))
+                    next_run = today_run_time if today_run_time >= now_utc else now_utc
+
+                # Якщо наступний запуск виходить за межі schedule_end
+                if next_run > self.schedule_end:
+                    return None
+
+                # Якщо наступний час ще не настав, повертаємо його
+                if next_run > now_utc:
+                    return next_run
+
+                # Якщо час вже пройшов, можемо запускати зараз
+                return now_utc
 
             case self.INTERVAL:
-                if self.last_run_at:
-                    return self.last_run_at + timedelta(minutes=self.frequency_minutes or 0)
+                # Згідно валідації, всі ці поля обов'язкові для INTERVAL
+                if not (self.schedule_start and self.schedule_end and self.frequency_minutes):
+                    return None
+
+                # Якщо поточний час поза межами дозволеного інтервалу
+                if now_utc < self.schedule_start:
+                    return None
+
+                if now_utc > self.schedule_end:
+                    return None
+
+                # Якщо немає останнього запуску - перший запуск в schedule_start
+                if not self.last_run_at:
+                    return self.schedule_start if self.schedule_start >= now_utc else now_utc
+
+                # Обчислюємо наступний час запуску від останнього запуску
+                next_run = self.last_run_at + timedelta(minutes=self.frequency_minutes)
+
+                # Якщо наступний запуск виходить за межі schedule_end
+                if next_run > self.schedule_end:
+                    return None
+
+                # Якщо наступний час ще не настав, повертаємо його
+                if next_run > now_utc:
+                    return next_run
+
+                # Якщо час вже пройшов, можемо запускати зараз
                 return now_utc
 
 

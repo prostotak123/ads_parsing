@@ -7,26 +7,34 @@ import DataPage from './pages/DataPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
+import GettingStartedPage from './pages/GettingStartedPage';
+import { Navigate } from 'react-router-dom';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppLayout />}>
-          <Route path="login" element={
-            <PublicOnlyRoute>
-              <LoginPage />
-            </PublicOnlyRoute>
-          } />
+          <Route
+            path="login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
 
-          {/* <Route
-            index
+          {/* Інструкція */}
+          <Route
+            path="help"
             element={
               <ProtectedRoute>
-                <WorkerSettingsPage />
+                <GettingStartedPage />
               </ProtectedRoute>
+
             }
-          /> */}
+          />
+
           <Route
             path="workers/run"
             element={
@@ -43,9 +51,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-
-
           <Route
             path="data"
             element={

@@ -30,6 +30,8 @@ function WorkerSettingsPage() {
   };
 
   const handleToggleActive = async (profile) => {
+    console.log("profile:", profile);
+
     try {
       const updated = await updateProfile(profile.id, { is_active: !profile.is_active });
       setWorkers((prev) =>
