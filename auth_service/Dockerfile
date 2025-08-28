@@ -21,7 +21,7 @@ COPY . .
 RUN mkdir -p /app/static
 
 # Додаємо entrypoint.sh
-COPY auth_entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Вказуємо entrypoint

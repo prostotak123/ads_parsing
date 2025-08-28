@@ -1,93 +1,180 @@
+x-db-base: &db-base
+  image: postgres:15
+  restart: unless-stopped
+  env_file: .env
+  healthcheck:
+    test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  networks:
+    - backend-net
+
 x-core-build: &core-build
   build:
     context: ./core_service
-    dockerfile: Dockerfile.dev
-  image: ads_project-core_image
+    dockerfile: Dockerfile.prod
+  image: ads_project-core_image_prod
+  restart: unless-stopped
+  env_file: .env
+  depends_on:
+    redis:
+      condition: service_started
+    db_core:
+      condition: service_healthy
+  networks:
+    - backend-net
   volumes:
+    - playwright_cache:/root/.cache/ms-playwright  # кеш браузерів Playwright (ок у проді)
     - ./core_service:/app
-    - playwright_cache:/root/.cache/ms-playwright
-
-  env_file:
-    - .env
 
 services:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Edge proxy + TLS (SWAG)
+  # ────────────────────────────────────────────────────────────────────────────
+  swag:
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/config/nginx/site-confs/default.conf:ro
+      - ./swag_config:/config
+      - auth_static:/config/www/auth_static:ro
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - URL=${SWAG_URL}
+      - SUBDOMAINS=${SWAG_SUBDOMAINS}
+      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS}
+      - VALIDATION=${SWAG_VALIDATION}
+      - EMAIL=${SWAG_EMAIL}
+    depends_on:
+      frontend:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+    networks:
+      - frontend-net
+      - backend-net
+  # ────────────────────────────────────────────────────────────────────────────
+  # AUTH (Django + Gunicorn) — зі статикою адмінки
+  # ────────────────────────────────────────────────────────────────────────────
   auth_service:
-    container_name: ads_project-auth_service
     build:
       context: ./auth_service
-      dockerfile: Dockerfile
-    command: [ "python3.12", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8000" ]
-    ports:
-      - "127.0.0.1:8080:8000"
-      - "127.0.0.1:5678:5678"
-    volumes:
-      - ./auth_service:/app
+      dockerfile: Dockerfile.prod
+    image: ads_project-auth_image_prod
+    restart: unless-stopped
+    env_file: .env
+    command: >
+      gunicorn auth_project.wsgi:application
+      --bind 0.0.0.0:8000 --workers=3 --threads=2 --timeout=60
+      --access-logfile - --error-logfile -
     depends_on:
-      - db_auth
-    env_file:
-      - .env
+      db_auth:
+        condition: service_healthy
+    networks:
+      - backend-net
+    volumes:
+      - auth_static:/app/static                  # STATIC_ROOT → /app/static
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # CORE (Django + Gunicorn, без статики)
+  # ────────────────────────────────────────────────────────────────────────────
   core_service:
     <<: *core-build
     command: >
-      sh -c "python3.12 -m debugpy --listen 0.0.0.0:5679 manage.py runserver 0.0.0.0:8001"
-    ports:
-      - "127.0.0.1:8081:8001"
-      - "127.0.0.1:5679:5679"
-    depends_on:
-      - redis
-      - db_core
+      gunicorn core_project.wsgi:application
+      --bind 0.0.0.0:8001 --workers=3 --threads=2 --timeout=60
+      --access-logfile - --error-logfile -
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   core_worker:
     <<: *core-build
     command: >
-      sh -c "python3.12 -m debugpy --listen 0.0.0.0:5680 -m celery -A core_project worker --loglevel=info --pool=processes --concurrency=2"
-    ports:
-      - "127.0.0.1:5680:5680"
+      sh -c "celery -A core_project worker --loglevel=info --pool=processes --concurrency=2"
+    environment:
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
-      - redis
-      - db_core
       - core_service
+      - redis
 
   core_beat:
     <<: *core-build
-    command: celery -A core_project beat --loglevel=info
+    command: >
+      sh -c "celery -A core_project beat --loglevel=info"
+    environment:
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
-      - redis
-      - db_core
       - core_service
+      - redis
 
   flower:
     <<: *core-build
     command: celery -A core_project.celery_app flower --port=5555
-    ports:
-      - "127.0.0.1:5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
     depends_on:
       - redis
       - core_worker
       - core_service
       - core_beat
+    networks:
+      - backend-net
+    # без ports у проді; якщо треба — проксани /flower/ через swag з basic auth
 
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-
+  # ────────────────────────────────────────────────────────────────────────────
+  # Redis (з паролем)
+  # ────────────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    ports:
-      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - backend-net
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # Frontend (якщо в тебе окремий контейнер на 3000; інакше можна віддавати
+  # з самого SWAG, але тут лишаю як proxy до контейнера фронта)
+  # ────────────────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "127.0.0.1:3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-
+      dockerfile: Dockerfile.prod
+    image: ads_project-frontend_image_prod
+    restart: unless-stopped
+    networks:
+      - frontend-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  # ────────────────────────────────────────────────────────────────────────────
+  # БД
+  # ────────────────────────────────────────────────────────────────────────────
   db_auth:
-    image: postgres:15
+    <<: *db-base
     container_name: ads_project-db_auth
     environment:
       POSTGRES_DB: ${AUTH_POSTGRES_DB}
@@ -95,11 +182,9 @@ services:
       POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
     volumes:
       - pg_db_auth:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
 
   db_core:
-    image: postgres:15
+    <<: *db-base
     container_name: ads_project-db_core
     environment:
       POSTGRES_DB: ${CORE_POSTGRES_DB}
@@ -107,10 +192,16 @@ services:
       POSTGRES_PASSWORD: ${CORE_POSTGRES_PASSWORD}
     volumes:
       - pg_data_core:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5433:5432"
 
 volumes:
   pg_data_core:
   pg_db_auth:
   playwright_cache:
+  swag_config:
+  auth_static:     # ← shared static for auth
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge

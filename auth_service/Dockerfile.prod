@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# (якщо потрібні системні залежності — додай тут apt-get ...)
+COPY . .
+
+# STATIC_ROOT повинен існувати (або створиться автоматично)
+# Створювати /app/static не обов'язково, якщо STATIC_ROOT налаштовано на іншу папку.
+# Якщо тримаєш тут — ок:
+RUN mkdir -p /app/static
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Старт через gunicorn — у compose:
+# CMD ["gunicorn", "auth_project.wsgi:application", "--bind", "0.0.0.0:8000"]
